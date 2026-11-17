@@ -1,0 +1,194 @@
+{
+  "users": [
+    {
+      "id": "7c0b5909-b06b-409a-8d0a-33f53308632b",
+      "email": "demo@bookflow.app",
+      "passwordHash": "$2a$10$ICKkanpwB.21yhcsGrJJ7e6pXwFH5LakkeE41q2vGr.Y2ZudaO7x2",
+      "name": "Dr. Sarah Khan",
+      "createdAt": "2026-11-17T11:29:39.014Z"
+    }
+  ],
+  "businesses": [
+    {
+      "id": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "ownerId": "7c0b5909-b06b-409a-8d0a-33f53308632b",
+      "name": "Mindful Therapy Studio",
+      "slug": "mindful-therapy",
+      "tagline": "Therapy that fits your life",
+      "color": "#0f766e",
+      "logoText": "M",
+      "timezone": "Asia/Karachi",
+      "plan": "free",
+      "stripeCustomerId": null
+    }
+  ],
+  "services": [
+    {
+      "id": "ccd22113-34d4-44fc-951e-99f04f50306e",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "name": "Individual Therapy",
+      "duration": 50,
+      "price": 80,
+      "bufferBefore": 10,
+      "bufferAfter": 10,
+      "color": "#0f766e",
+      "description": "One-to-one session, in-person or video.",
+      "active": true
+    },
+    {
+      "id": "12fcd8d6-82ff-41a9-90d4-878248d00375",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "name": "Couples Counselling",
+      "duration": 75,
+      "price": 120,
+      "bufferBefore": 15,
+      "bufferAfter": 15,
+      "color": "#7c3aed",
+      "description": "For couples — communication & conflict.",
+      "active": true
+    },
+    {
+      "id": "72132d51-8455-4cb8-a90d-0e7e649e9f93",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "name": "Initial Consultation",
+      "duration": 30,
+      "price": 0,
+      "bufferBefore": 5,
+      "bufferAfter": 5,
+      "color": "#ea580c",
+      "description": "Free discovery call.",
+      "active": true
+    }
+  ],
+  "bookings": [
+    {
+      "id": "db5d5be4-9172-46ea-8ab4-4e3a1e3e78f1",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "serviceId": "ccd22113-34d4-44fc-951e-99f04f50306e",
+      "clientName": "Emma Wilson",
+      "clientEmail": "emmawilson@example.com",
+      "start": "2026-11-17T05:00:00.000Z",
+      "end": "2026-11-17T05:50:00.000Z",
+      "timezone": "Asia/Karachi",
+      "status": "confirmed",
+      "notes": ""
+    },
+    {
+      "id": "448515ab-08d1-4264-867c-14eb5fe956c1",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "serviceId": "12fcd8d6-82ff-41a9-90d4-878248d00375",
+      "clientName": "Liam & Sofia Chen",
+      "clientEmail": "liam&sofiachen@example.com",
+      "start": "2026-11-17T09:00:00.000Z",
+      "end": "2026-11-17T09:50:00.000Z",
+      "timezone": "Asia/Karachi",
+      "status": "confirmed",
+      "notes": ""
+    },
+    {
+      "id": "ef7f8a6b-3ea4-48e1-948f-a7dcdeef8c68",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "serviceId": "ccd22113-34d4-44fc-951e-99f04f50306e",
+      "clientName": "Noah Ahmed",
+      "clientEmail": "noahahmed@example.com",
+      "start": "2026-11-18T06:00:00.000Z",
+      "end": "2026-11-18T06:50:00.000Z",
+      "timezone": "Asia/Karachi",
+      "status": "confirmed",
+      "notes": ""
+    },
+    {
+      "id": "9b4ee352-d21a-4fc1-826a-fd7745ea831b",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "serviceId": "72132d51-8455-4cb8-a90d-0e7e649e9f93",
+      "clientName": "Olivia Brown",
+      "clientEmail": "oliviabrown@example.com",
+      "start": "2026-11-19T04:00:00.000Z",
+      "end": "2026-11-19T04:50:00.000Z",
+      "timezone": "Asia/Karachi",
+      "status": "confirmed",
+      "notes": ""
+    },
+    {
+      "id": "4d05f512-78c0-47f5-aedd-93f57100b645",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "serviceId": "ccd22113-34d4-44fc-951e-99f04f50306e",
+      "clientName": "Mia Johnson",
+      "clientEmail": "miajohnson@example.com",
+      "start": "2026-11-20T10:00:00.000Z",
+      "end": "2026-11-20T10:50:00.000Z",
+      "timezone": "Asia/Karachi",
+      "status": "confirmed",
+      "notes": ""
+    }
+  ],
+  "team": [
+    {
+      "id": "6c4913ef-9f88-4c78-8d0a-0395f425aba5",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "name": "Dr. Sarah Khan",
+      "email": "demo@bookflow.app",
+      "role": "Owner / Therapist",
+      "color": "#0f766e"
+    },
+    {
+      "id": "5b199cbf-8c44-49bf-9b8d-1a18db32445d",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "name": "James Patel",
+      "email": "james@mindful.example",
+      "role": "Psychologist",
+      "color": "#2563eb"
+    },
+    {
+      "id": "d1573850-91af-482e-8f8b-f5c1a3c150f7",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "name": "Aisha Noor",
+      "email": "aisha@mindful.example",
+      "role": "Counsellor",
+      "color": "#db2777"
+    }
+  ],
+  "availability": [
+    {
+      "id": "fcad3736-f57f-419d-aa49-d24abaf167ee",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "dayOfWeek": 1,
+      "start": "09:00",
+      "end": "17:00",
+      "enabled": true
+    },
+    {
+      "id": "35cb90aa-9298-40f5-812f-a693b79ba093",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "dayOfWeek": 2,
+      "start": "09:00",
+      "end": "17:00",
+      "enabled": true
+    },
+    {
+      "id": "1ad86625-dbab-4cbb-8d83-0b8845a35509",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "dayOfWeek": 3,
+      "start": "09:00",
+      "end": "17:00",
+      "enabled": true
+    },
+    {
+      "id": "2efd69cf-2992-422f-9b62-4ddef905f732",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "dayOfWeek": 4,
+      "start": "09:00",
+      "end": "17:00",
+      "enabled": true
+    },
+    {
+      "id": "b1968677-915a-4a7f-8813-932ab262e320",
+      "businessId": "70312623-6cc6-410e-bf15-58df96e8db62",
+      "dayOfWeek": 5,
+      "start": "09:00",
+      "end": "17:00",
+      "enabled": true
+    }
+  ],
+  "emails": []
+}
