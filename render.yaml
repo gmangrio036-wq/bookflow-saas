@@ -2,6 +2,7 @@ services:
   - type: web
     name: bookflow-saas
     env: node
+    plan: free
     buildCommand: npm install && npm --prefix server install && npm --prefix client install && npm run build
     startCommand: NODE_ENV=production node server/src/index.js
     envVars:
