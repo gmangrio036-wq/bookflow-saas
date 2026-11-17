@@ -10,7 +10,7 @@ export async function api(path, opts={}){
   if (isDemoMode()) return mockApi(path, opts);
   const token = getToken();
   try {
-    const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 6000);
+    const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 90000);
     const res = await fetch(BASE+path, { ...opts, signal: ctrl.signal, headers:{ 'Content-Type':'application/json', ...(token?{Authorization:`Bearer ${token}`}:{}), ...(opts.headers||{}) } });
     clearTimeout(t);
     const ct = res.headers.get('content-type')||'';
