@@ -152,10 +152,55 @@ app.post('/api/public/:slug/book', (req,res)=>{
   const startD=new Date(start); const endD=new Date(startD.getTime()+svc.duration*60000);
   const booking={ id:uuidv4(), businessId:biz.id, serviceId, teamMemberId: teamMemberId||null, clientName, clientEmail, clientPhone:clientPhone||'', start:startD.toISOString(), end:endD.toISOString(), timezone: timezone||biz.timezone, status:'confirmed', notes:notes||'' };
   db.bookings.push(booking);
+  if(!db.clients) db.clients=[];
+  const _ck = clientEmail.toLowerCase();
+  let _cl = db.clients.find(c=>c.businessId===biz.id && (c.email||'').toLowerCase()===_ck);
+  if(_cl){ _cl.name=clientName; if(clientPhone) _cl.phone=clientPhone; if(notes) _cl.notes=notes; _cl.updatedAt=new Date().toISOString(); }
+  else db.clients.push({ id:uuidv4(), businessId:biz.id, name:clientName, email:clientEmail, phone:clientPhone||'', notes:notes||'', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() });
   const email = sendEmail(db, clientEmail, `Booking confirmed — ${svc.name} at ${biz.name}`, `Hi ${clientName},\n\nYou're booked!\n${svc.name} with ${biz.name}\nWhen: ${startD.toLocaleString()} (${booking.timezone})\nDuration: ${svc.duration} min\n\nAdd to calendar: ${process.env.CLIENT_URL||'http://localhost:5173'}/api/bookings/${booking.id}/ics\n\n— ${biz.name} via BookFlow`);
   sendEmail(db, biz.name, `New booking: ${clientName} — ${svc.name}`, `New booking from your public page.\nClient: ${clientName} (${clientEmail})\nService: ${svc.name}\nWhen: ${startD.toLocaleString()}`);
   save(db);
   res.json({ booking, emailPreview: email });
+});
+
+
+// --- Clients (saved automatically from bookings) ---
+function clientStats(db, bizId, email){
+  const bs = db.bookings.filter(b=>b.businessId===bizId && (b.clientEmail||'').toLowerCase()===email.toLowerCase());
+  const live = bs.filter(b=>b.status!=='cancelled');
+  const upcoming = live.filter(b=> new Date(b.start) > new Date()).sort((a,b)=> new Date(a.start)-new Date(b.start));
+  return { totalBookings: live.length, upcomingCount: upcoming.length, nextBooking: upcoming[0]?.start||null, lastBooking: bs.length? bs.slice().sort((a,b)=> new Date(b.start)-new Date(a.start))[0].start : null };
+}
+app.get('/api/clients', auth, (req,res)=>{
+  const db=load(); const bizId=req.user.businessId; if(!db.clients) db.clients=[];
+  const byEmail = new Map();
+  for(const c of db.clients.filter(c=>c.businessId===bizId)) byEmail.set(c.email.toLowerCase(), { ...c });
+  for(const b of db.bookings.filter(x=>x.businessId===bizId)){
+    const k=(b.clientEmail||'').toLowerCase(); if(!k) continue;
+    if(!byEmail.has(k)) byEmail.set(k, { id:'derived-'+k, businessId:bizId, name:b.clientName, email:b.clientEmail, phone:b.clientPhone||'', notes:b.notes||'', createdAt:b.start, updatedAt:b.start });
+  }
+  const list=[...byEmail.values()].map(c=> ({ ...c, ...clientStats(db, bizId, c.email) }));
+  res.json(list.sort((a,b)=> (b.upcomingCount-a.upcomingCount) || (b.totalBookings-a.totalBookings)));
+});
+
+// --- Client portal (public): clients see their own bookings + calendar ---
+app.post('/api/public/:slug/my-bookings', (req,res)=>{
+  const { email } = req.body||{}; const db=load(); const biz=db.businesses.find(b=>b.slug===req.params.slug);
+  if(!biz) return res.status(404).json({error:'Not found'}); if(!email) return res.status(400).json({error:'Email required'});
+  const key=email.toLowerCase();
+  const list=db.bookings.filter(b=>b.businessId===biz.id && (b.clientEmail||'').toLowerCase()===key)
+    .sort((a,b)=> new Date(a.start)-new Date(b.start))
+    .map(b=> ({ ...b, service: db.services.find(s=>s.id===b.serviceId)||null, teamMember: db.team.find(t=>t.id===b.teamMemberId)||null }));
+  const stored=(db.clients||[]).find(c=>c.businessId===biz.id && (c.email||'').toLowerCase()===key);
+  const client = stored || (list[0] ? { name:list[0].clientName, email, phone:list[0].clientPhone||'' } : null);
+  res.json({ business: biz, client, bookings: list });
+});
+app.post('/api/public/:slug/cancel-booking', (req,res)=>{
+  const { bookingId, email } = req.body||{}; const db=load(); const biz=db.businesses.find(b=>b.slug===req.params.slug);
+  if(!biz) return res.status(404).json({error:'Not found'});
+  const b=db.bookings.find(x=>x.id===bookingId && x.businessId===biz.id);
+  if(!b || (b.clientEmail||'').toLowerCase()!==(email||'').toLowerCase()) return res.status(404).json({error:'Booking not found for that email'});
+  b.status='cancelled'; save(db); res.json({ ok:true });
 });
 
 // --- Calendar sync / ICS ---

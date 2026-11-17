@@ -1,5 +1,6 @@
 import { mockApi } from './mock'
 const BASE = import.meta.env.VITE_API_URL || '';
+export const API_BASE = BASE;
 export function getToken(){ return localStorage.getItem('bf_token'); }
 export function setAuth(data){ localStorage.setItem('bf_token', data.token); localStorage.setItem('bf_user', JSON.stringify(data.user)); localStorage.setItem('bf_biz', JSON.stringify(data.business)); }
 export function clearAuth(){ localStorage.removeItem('bf_token'); localStorage.removeItem('bf_user'); localStorage.removeItem('bf_biz'); }

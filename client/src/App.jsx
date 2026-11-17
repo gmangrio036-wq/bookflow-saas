@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
-import { api, getToken, setAuth, clearAuth, getBiz, TIMEZONES } from './lib/api'
+import { api, API_BASE, getToken, setAuth, clearAuth, getBiz, TIMEZONES } from './lib/api'
 
 const localizer = momentLocalizer(moment)
 
@@ -19,6 +19,10 @@ export default function App(){
   if (hash.startsWith('#/book/')) {
     const slug = hash.replace('#/book/','').split('?')[0]
     return <><DemoBanner/><PublicBooking slug={slug} /></>
+  }
+  if (hash.startsWith('#/portal/')) {
+    const slug = hash.replace('#/portal/','').split('?')[0]
+    return <><DemoBanner/><ClientPortal slug={slug} /></>
   }
   if (hash === '#/login' || hash === '#/register') return <><DemoBanner/><AuthPage mode={hash === '#/register' ? 'register' : 'login'} /></>
   if (hash.startsWith('#/app')) return <><DemoBanner/>{authed ? <Dashboard /> : <AuthPage mode="login" />}</>
@@ -93,9 +97,10 @@ function AuthPage({ mode }){
 function Dashboard(){
   const biz0 = getBiz()
   const [tab, setTab] = useState('overview')
+  const [clients, setClients] = useState([])
   const [bookings, setBookings] = useState([]); const [services, setServices] = useState([]); const [team, setTeam] = useState([]); const [biz, setBiz] = useState(biz0); const [emails, setEmails] = useState([]); const [plans, setPlans] = useState([])
   const [calDate, setCalDate] = useState(new Date()); const [calView, setCalView] = useState('week')
-  async function load(){ try{ const [b,s,t,me,pl,em] = await Promise.all([api('/api/bookings'), api('/api/services'), api('/api/team'), api('/api/me'), api('/api/billing/plans'), api('/api/emails')]); setBookings(b); setServices(s); setTeam(t); setBiz(me.business); setPlans(pl); setEmails(em); localStorage.setItem('bf_biz', JSON.stringify(me.business)); }catch(e){ if(e.message.includes('token')||e.message.includes('Invalid')){ clearAuth(); go('#/login') } } }
+  async function load(){ try{ const [b,s,t,me,pl,em,cl] = await Promise.all([api('/api/bookings'), api('/api/services'), api('/api/team'), api('/api/me'), api('/api/billing/plans'), api('/api/emails'), api('/api/clients').catch(()=>[])]); setBookings(b); setServices(s); setTeam(t); setClients(cl); setBiz(me.business); setPlans(pl); setEmails(em); localStorage.setItem('bf_biz', JSON.stringify(me.business)); }catch(e){ if(e.message.includes('token')||e.message.includes('Invalid')){ clearAuth(); go('#/login') } } }
   useEffect(()=>{ load() },[])
   const events = useMemo(()=> bookings.filter(b=>b.status!=='cancelled').map(b=>({ id:b.id, title:`${b.service?.name||'Session'} — ${b.clientName}`, start:new Date(b.start), end:new Date(b.end), resource:b })),[bookings])
   const upcoming = bookings.filter(b=> new Date(b.start) >= new Date() && b.status!=='cancelled')
@@ -105,7 +110,7 @@ function Dashboard(){
 
   return <div className="shell">
     <aside className="sidebar"><div className="logo">📅 Book<span>Flow</span></div><div className="biz-chip"><div className="avatar" style={{background:biz?.color}}>{biz?.logoText||'B'}</div><div><b>{biz?.name}</b><small>/{biz?.slug} • {biz?.plan?.toUpperCase()}</small></div></div>
-      {[['overview','🏠 Overview'],['calendar','📅 Calendar'],['bookings','📋 Bookings'],['services','🧩 Services & Buffers'],['team','👥 Team'],['branding','🎨 Branding & Availability'],['billing','💳 Billing'],['emails','✉️ Emails sent']].map(([k,l])=><button key={k} className={tab===k?'side active':'side'} onClick={()=>setTab(k)}>{l}</button>)}
+      {[['overview','🏠 Overview'],['calendar','📅 Calendar'],['bookings','📋 Bookings'],['clients','🧑 Clients'],['services','🧩 Services & Buffers'],['team','👥 Team'],['branding','🎨 Branding & Availability'],['billing','💳 Billing'],['emails','✉️ Emails sent']].map(([k,l])=><button key={k} className={tab===k?'side active':'side'} onClick={()=>setTab(k)}>{l}</button>)}
       <a className="side link" href={`#/book/${biz?.slug}`} target="_blank" rel="noreferrer">🔗 Your public booking page ↗</a>
       <button className="side" onClick={()=>{clearAuth(); go('#/')}}>Log out</button>
     </aside>
@@ -113,6 +118,7 @@ function Dashboard(){
       {tab==='overview' && <><h1>Good to see you 👋</h1><p className="muted">Share your booking link: <code>{window.location.origin}{window.location.pathname}#/book/{biz?.slug}</code></p><div className="stats"><div className="stat"><b>{upcoming.length}</b><span>Upcoming bookings</span></div><div className="stat"><b>${revenue}</b><span>Booked revenue</span></div><div className="stat"><b>{services.length}</b><span>Services</span></div><div className="stat"><b>{team.length}</b><span>Team members</span></div></div><h3>Upcoming bookings</h3><BookingList bookings={upcoming.slice(0,6)} onCancel={cancelBooking}/><h3>Calendar sync</h3><div className="card"><p>Subscribe to all bookings in Google / Apple Calendar:</p><code className="block-code">{window.location.origin.replace(':5173',':4000')}/api/calendar/feed/{biz?.slug}.ics</code><p className="muted">Each booking confirmation also includes a per-booking .ics file.</p></div></>}
       {tab==='calendar' && <><h1>Calendar</h1><p className="muted">Powered by react-big-calendar — drag, week & month views, colour by service.</p><div className="calendar-wrap"><Calendar localizer={localizer} events={events} startAccessor="start" endAccessor="end" date={calDate} view={calView} onNavigate={setCalDate} onView={setCalView} style={{height:620}} eventPropGetter={(ev)=>({ style:{ backgroundColor: ev.resource.service?.color||biz?.color||'#0f766e', borderRadius:8, border:'none' } })} /></div></>}
       {tab==='bookings' && <><h1>All bookings</h1><BookingList bookings={bookings} onCancel={cancelBooking} showAll/></>}
+      {tab==='clients' && <ClientsTab clients={clients} bookings={bookings} biz={biz} />}
       {tab==='services' && <ServicesTab services={services} reload={load} />}
       {tab==='team' && <TeamTab team={team} reload={load} plan={biz?.plan} />}
       {tab==='branding' && <BrandingTab biz={biz} reload={load} />}
@@ -124,7 +130,7 @@ function Dashboard(){
 
 function BookingList({ bookings, onCancel, showAll }){
   if(!bookings.length) return <div className="card">No bookings yet. Share your public page to get your first one.</div>
-  return <div>{bookings.map(b=><div key={b.id} className="booking-row"><div className="dot" style={{background:b.service?.color||'#0f766e'}}></div><div className="grow"><b>{b.service?.name||'Session'} — {b.clientName}</b><small>{new Date(b.start).toLocaleString()} • {b.service?.duration} min • {b.timezone} • {b.clientEmail}</small></div><span className={`badge ${b.status}`}>{b.status}</span>{b.status!=='cancelled' && <button className="btn small ghost" onClick={()=>onCancel(b.id)}>Cancel</button>}<a className="btn small ghost" href={`/api/bookings/${b.id}/ics`}>↓ .ics</a></div>)}</div>
+  return <div>{bookings.map(b=><div key={b.id} className="booking-row"><div className="dot" style={{background:b.service?.color||'#0f766e'}}></div><div className="grow"><b>{b.service?.name||'Session'} — {b.clientName}</b><small>{new Date(b.start).toLocaleString()} • {b.service?.duration} min • {b.timezone} • {b.clientEmail}</small></div><span className={`badge ${b.status}`}>{b.status}</span>{b.status!=='cancelled' && <button className="btn small ghost" onClick={()=>onCancel(b.id)}>Cancel</button>}<a className="btn small ghost" href={`${API_BASE}/api/bookings/${b.id}/ics`}>↓ .ics</a></div>)}</div>
 }
 
 function ServicesTab({ services, reload }){
@@ -162,13 +168,13 @@ function PublicBooking({ slug }){
   const [form, setForm] = useState({ clientName:'', clientEmail:'', clientPhone:'', notes:'' }); const [done, setDone] = useState(null); const [teamId, setTeamId] = useState('')
   useEffect(()=>{ api(`/api/public/${slug}`).then(d=>{ setData(d); if(d.services[0]) setServiceId(d.services[0].id) }).catch(e=>setErr(e.message)) },[slug])
   useEffect(()=>{ if(!serviceId || !date) return; api(`/api/public/${slug}/slots?date=${date}&serviceId=${serviceId}`).then(r=>setSlots(r.slots)).catch(()=>setSlots([])) },[slug, serviceId, date])
-  async function book(e){ e.preventDefault(); if(!slot) return alert('Pick a time slot first'); const r = await api(`/api/public/${slug}/book`,{method:'POST', body: JSON.stringify({ serviceId, start: slot.start, timezone: tz, teamMemberId: teamId||undefined, ...form })}); setDone(r) }
+  async function book(e){ e.preventDefault(); if(!slot) return alert('Pick a time slot first'); const r = await api(`/api/public/${slug}/book`,{method:'POST', body: JSON.stringify({ serviceId, start: slot.start, timezone: tz, teamMemberId: teamId||undefined, ...form })}); localStorage.setItem('bf_client_email', form.clientEmail); setDone(r) }
   if(err) return <div className="auth-wrap"><div className="auth-card"><h2>Not found</h2><p>{err}</p><p>Try the demo: <a href="#/book/mindful-therapy">/book/mindful-therapy</a></p></div></div>
   if(!data) return <div className="center pad">Loading booking page…</div>
   const biz = data.business; const svc = data.services.find(s=>s.id===serviceId)
-  if(done) return <div className="auth-wrap"><div className="auth-card wide"><div className="success">✅</div><h2>You're booked, {done.booking.clientName.split(' ')[0]}!</h2><p><b>{svc?.name}</b> at {biz.name}<br/>{new Date(done.booking.start).toLocaleString()} ({done.booking.timezone})</p><p className="muted">Confirmation email sent to {done.booking.clientEmail} (mock log in dashboard → Emails). </p><div className="row"><a className="btn" href={`/api/bookings/${done.booking.id}/ics`}>Download .ics</a><a className="btn ghost" href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent((svc?.name||'Booking')+' — '+biz.name)}&dates=${done.booking.start.replace(/[-:]/g,'').replace(/\.\d{3}/,'')}/${done.booking.end.replace(/[-:]/g,'').replace(/\.\d{3}/,'')}`} target="_blank" rel="noreferrer">Add to Google Calendar</a></div><button className="btn ghost block" onClick={()=>{setDone(null); setSlot(null)}}>Book another</button></div></div>
+  if(done) return <div className="auth-wrap"><div className="auth-card wide"><div className="success">✅</div><h2>You're booked, {done.booking.clientName.split(' ')[0]}!</h2><p><b>{svc?.name}</b> at {biz.name}<br/>{new Date(done.booking.start).toLocaleString()} ({done.booking.timezone})</p><p className="muted">Confirmation email sent to {done.booking.clientEmail} (mock log in dashboard → Emails). </p><div className="row"><a className="btn" href={`${API_BASE}/api/bookings/${done.booking.id}/ics`}>Download .ics</a><a className="btn ghost" href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent((svc?.name||'Booking')+' — '+biz.name)}&dates=${done.booking.start.replace(/[-:]/g,'').replace(/\.\d{3}/,'')}/${done.booking.end.replace(/[-:]/g,'').replace(/\.\d{3}/,'')}`} target="_blank" rel="noreferrer">Add to Google Calendar</a></div><a className="btn block" style={{marginTop:10}} href={`#/portal/${slug}`}>📅 View my bookings &amp; my calendar</a><button className="btn ghost block" onClick={()=>{setDone(null); setSlot(null)}}>Book another</button></div></div>
   return <div className="booking-page" style={{'--brand': biz.color}}>
-    <header className="book-head" style={{background: biz.color}}><div className="avatar large" style={{background:'rgba(255,255,255,.25)'}}>{biz.logoText}</div><h1>{biz.name}</h1><p>{biz.tagline}</p><small>Powered by BookFlow • White-label client portal</small></header>
+    <header className="book-head" style={{background: biz.color}}><div className="avatar large" style={{background:'rgba(255,255,255,.25)'}}>{biz.logoText}</div><h1>{biz.name}</h1><p>{biz.tagline}</p><small>Powered by BookFlow • White-label client portal</small><div style={{marginTop:8}}><a className="btn small" style={{background:'rgba(255,255,255,.9)',color:'#0f172a'}} href={`#/portal/${slug}`}>🧑 My bookings &amp; calendar</a></div></header>
     <div className="book-grid">
       <div className="card"><h3>1. Choose a service</h3>{data.services.map(s=><button key={s.id} className={serviceId===s.id?'service active':'service'} onClick={()=>setServiceId(s.id)}><b>{s.name}</b><span>${s.price} • {s.duration} min • +{s.bufferBefore+s.bufferAfter} min buffer</span><small>{s.description}</small></button>)}
       <h3 style={{marginTop:20}}>2. Practitioner (optional)</h3><select value={teamId} onChange={e=>setTeamId(e.target.value)}><option value="">First available</option>{data.team.map(m=><option key={m.id} value={m.id}>{m.name} — {m.role}</option>)}</select>
@@ -178,3 +184,53 @@ function PublicBooking({ slug }){
     </div>
   </div>
 }
+
+/* ---------- CLIENTS (dashboard) ---------- */
+function ClientsTab({ clients, bookings, biz }){
+  const [q, setQ] = useState(''); const [open, setOpen] = useState('')
+  const list = clients.filter(c=> (c.name+' '+c.email+' '+(c.phone||'')).toLowerCase().includes(q.toLowerCase()))
+  return <div><h1>Clients</h1><p className="muted">Saved automatically whenever a client books — name, email and phone are stored from their booking. Click a client to see their bookings.</p>
+  <input placeholder="Search clients…" value={q} onChange={e=>setQ(e.target.value)} style={{marginBottom:14}} />
+  {list.length===0 && <div className="card">No clients yet. Share your booking link and clients will appear here after their first booking:<br/><code>{window.location.origin}{window.location.pathname}#/book/{biz?.slug}</code></div>}
+  {list.map(c=>{ const mine = bookings.filter(b=> (b.clientEmail||'').toLowerCase()===c.email.toLowerCase()); return <div key={c.id} className="card" style={{marginBottom:10}}>
+    <div className="booking-row" style={{cursor:'pointer'}} onClick={()=>setOpen(open===c.id?'':c.id)}>
+      <div className="avatar" style={{background: biz?.color||'#0f766e'}}>{(c.name||'?').trim().charAt(0).toUpperCase()}</div>
+      <div className="grow"><b>{c.name}</b><small>{c.email}{c.phone? ' • '+c.phone : ''}</small></div>
+      <span className="badge confirmed">{c.totalBookings} booking{c.totalBookings===1?'':'s'}</span>
+      {c.nextBooking && <span className="badge">Next: {new Date(c.nextBooking).toLocaleString()}</span>}
+    </div>
+    {open===c.id && <div style={{marginTop:10}}>{mine.length===0 ? <p className="muted">No bookings found.</p> : mine.map(b=><div key={b.id} className="booking-row"><div className="dot" style={{background:b.service?.color||'#0f766e'}}></div><div className="grow"><b>{b.service?.name||'Session'}</b><small>{new Date(b.start).toLocaleString()} • {b.timezone}</small></div><span className={`badge ${b.status}`}>{b.status}</span></div>)}
+    <p className="muted" style={{marginTop:8}}>Client's own page: <code>{window.location.origin}{window.location.pathname}#/portal/{biz?.slug}</code> (they open it with their email)</p></div>}
+  </div> })}
+  </div>
+}
+
+/* ---------- CLIENT PORTAL (public) ---------- */
+function ClientPortal({ slug }){
+  const [email, setEmail] = useState(localStorage.getItem('bf_client_email')||'')
+  const [data, setData] = useState(null); const [err, setErr] = useState(''); const [view, setView] = useState('list'); const [calDate, setCalDate] = useState(new Date())
+  async function lookup(e){ e?.preventDefault(); setErr(''); try{ const d = await api(`/api/public/${slug}/my-bookings`, { method:'POST', body: JSON.stringify({ email }) }); if(!d.client && d.bookings.length===0){ setErr('No bookings found for that email at this business. Check the email you booked with.'); setData(null); return } localStorage.setItem('bf_client_email', email); setData(d) }catch(ex){ setErr(ex.message) } }
+  async function cancel(id){ if(!confirm('Cancel this booking?')) return; await api(`/api/public/${slug}/cancel-booking`, { method:'POST', body: JSON.stringify({ bookingId: id, email }) }); lookup() }
+  useEffect(()=>{ if(email) lookup() },[])
+  const biz = data?.business
+  const events = useMemo(()=> (data?.bookings||[]).filter(b=>b.status!=='cancelled').map(b=>({ id:b.id, title:`${b.service?.name||'Session'} — ${biz?.name||''}`, start:new Date(b.start), end:new Date(b.end), resource:b })),[data])
+  const upcoming = (data?.bookings||[]).filter(b=> b.status!=='cancelled' && new Date(b.start) > new Date())
+  const past = (data?.bookings||[]).filter(b=> b.status==='cancelled' || new Date(b.start) <= new Date())
+  return <div className="booking-page" style={{'--brand': biz?.color||'#0f766e'}}>
+    <header className="book-head" style={{background: biz?.color||'#0f766e'}}><div className="avatar large" style={{background:'rgba(255,255,255,.25)'}}>{biz?.logoText||'B'}</div><h1>{biz?.name||'My Bookings'}</h1><p>{biz? biz.tagline : 'Client portal'} — your bookings &amp; calendar</p><small><a style={{color:'#fff',textDecoration:'underline'}} href={`#/book/${slug}`}>← Book a new session</a></small></header>
+    <div style={{maxWidth:860, margin:'22px auto', padding:'0 16px'}}>
+      <form onSubmit={lookup} className="card form"><h3>Find my bookings</h3><label>Your booking email<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" /></label><button className="btn block">Show my bookings</button>{err && <p className="error">{err}</p>}</form>
+      {data && data.client && <div className="card" style={{marginTop:16}}><h3>👤 My saved details</h3><p><b>{data.client.name}</b><br/>{data.client.email}{data.client.phone? <><br/>{data.client.phone}</> : null}</p><p className="muted">These details were saved from your bookings. They are used only for your appointments with {biz?.name}.</p></div>}
+      {data && <div style={{marginTop:16}}>
+        <div className="row" style={{marginBottom:12}}><button className={view==='list'?'btn':'btn ghost'} onClick={()=>setView('list')}>📋 My bookings</button><button className={view==='calendar'?'btn':'btn ghost'} onClick={()=>setView('calendar')}>📅 My calendar</button></div>
+        {view==='calendar' && <div className="calendar-wrap"><Calendar localizer={localizer} events={events} startAccessor="start" endAccessor="end" date={calDate} view="month" onNavigate={setCalDate} style={{height:520}} eventPropGetter={(ev)=>({ style:{ backgroundColor: ev.resource.service?.color||biz?.color||'#0f766e', borderRadius:8, border:'none' } })} /></div>}
+        {view==='list' && <div>
+          <h3>Upcoming</h3>{upcoming.length===0 && <p className="muted">No upcoming bookings.</p>}
+          {upcoming.map(b=><div key={b.id} className="booking-row card" style={{marginBottom:8}}><div className="dot" style={{background:b.service?.color||'#0f766e'}}></div><div className="grow"><b>{b.service?.name||'Session'} — {biz?.name}</b><small>{new Date(b.start).toLocaleString()} • {b.service?.duration} min • {b.timezone}{b.teamMember? ' • with '+b.teamMember.name : ''}</small></div><a className="btn small ghost" href={`${API_BASE}/api/bookings/${b.id}/ics`}>↓ .ics</a><button className="btn small ghost" onClick={()=>cancel(b.id)}>Cancel</button></div>)}
+          {past.length>0 && <><h3 style={{marginTop:18}}>Past &amp; cancelled</h3>{past.map(b=><div key={b.id} className="booking-row card" style={{marginBottom:8,opacity:.65}}><div className="dot" style={{background:'#94a3b8'}}></div><div className="grow"><b>{b.service?.name||'Session'}</b><small>{new Date(b.start).toLocaleString()}</small></div><span className={`badge ${b.status}`}>{b.status}</span></div>)}</>}
+        </div>}
+      </div>}
+    </div>
+  </div>
+}
+
